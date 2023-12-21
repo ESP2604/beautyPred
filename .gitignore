@@ -1,0 +1,8 @@
+/vscode/
+/data/
+/models/
+/__pycache__/
+/TestImage/
+/runs/experiment_name
+/*.xlsx
+/.vscode/
