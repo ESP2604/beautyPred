@@ -51,4 +51,6 @@ python preEfficientNetFastFaceFolder.py --excel "output.xlsx" --sheetname "Sheet
 - `--score`：指定美观度分数的阈值，只添加大于阈值的图像到 Excel，默认为 1。
 - `--limit`：指定最大处理图像的数量，默认为 200。
 
+# 預覽圖
+
 ![替代文本](./1.jpg)
