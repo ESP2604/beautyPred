@@ -1,7 +1,5 @@
 import cv2
-
 import numpy as np
-
 from PIL import Image
 import torch
 from efficientnet_pytorch import EfficientNet
@@ -11,7 +9,7 @@ import glob
 import os
 from openpyxl import Workbook ,load_workbook
 import excelTool
-from openpyxl.drawing.image import Image as OpenpyxlImage
+# from openpyxl.drawing.image import Image as OpenpyxlImage
 import argparse
 import MyImageTool
 
@@ -222,7 +220,7 @@ else:
     ws = wb.create_sheet(sheet_name)
 i = 1
 imagePaths =  glob.glob(folder_path + '/*.jpg') + glob.glob(folder_path + '/*.png') +  glob.glob(folder_path + '/*.jpeg')
-
+limit = min(limit, len(imagePaths))
 # 遍历文件夹中的所有图片
 for img_file in imagePaths:
      # 读取图像
