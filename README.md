@@ -37,7 +37,7 @@ pip install -r requirements.txt
 要运行 beautyPred工具，只需运行脚本并提供适当的命令行参数：
 
 ```bash
-python preEfficientNetFastFaceFolder.py --excel "output.xlsx" --sheetname "Sheet1" --source "TestImage" --score 1 --limit 10
+python preEfficientNetFastFaceFolder.py --excel "output.xlsx" --sheetname "Sheet" --source "TestImage" --score 1 --limit 10
 ```
 
 
