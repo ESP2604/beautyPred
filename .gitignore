@@ -1,8 +1,10 @@
 /vscode/
 /data/
 /models/efficient2_model_epoch_15.pth
+!/models/.gitkeep
 /__pycache__/
 /TestImage/
+!/TestImage/.gitkeep
 /runs/*
 /*.xlsx
 /.vscode/
