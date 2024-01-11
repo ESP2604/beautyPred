@@ -61,9 +61,7 @@ transform = transforms.Compose([
 def expand_coords(coords):
     """
     根据给定的扩展比例放大坐标
-
     :param coords: 包含四个元素的列表或元组，格式为 [x, y, width, height]
-    :param expand_ratio: 放大的比例，例如 1.5 代表放大 50%
     :return: 放大后的新坐标 [new_x, new_y, new_w, new_h]
     """
         # 假设 coords 是一个包含四个元素的列表或元组，格式为 [x, y, width, height]
@@ -72,7 +70,7 @@ def expand_coords(coords):
     w = coords[2] 
     h = coords[3] 
     new_x = max(0, (x - int(w * 0.2) ))  # 确保坐标不会是负数
-    new_y = max(0, (y - int(h* 0.4) ))  # 确保坐标不会是负数
+    new_y = max(0, (y - int(h * 0.4) ))  # 确保坐标不会是负数
     new_w = int( w * 1.5) 
     new_h = int( h * 1.5)
     return new_x, new_y, new_w, new_h
@@ -194,18 +192,17 @@ def writeExcel(data,i):
 parser = argparse.ArgumentParser(description='人臉打分輸出excel')
 
 # 添加參數，並為部分參數設置預設值
-parser.add_argument('excel', nargs='?', default='output1.xlsx', help='輸出excel路徑，如果有則寫入excel的其他分頁，預設為output.xlsx')
-parser.add_argument('sheetname', nargs='?', default='Sheet', help='excel 分頁名稱，預設為sheet')
-parser.add_argument('source', nargs='?' , default='TestImage', help='圖片資料夾，預設TestImage')
-parser.add_argument('score', nargs='?', type=int, default=1, help='分數[1~5]，大於輸入的值才添加進excel，預設為1')
-parser.add_argument('limit', nargs='?', type=int, default=200, help='最大處理圖片數量 預設為200')
+parser.add_argument('--excel', nargs='?', default='output1.xlsx', help='輸出excel路徑，如果有則寫入excel的其他分頁，預設為output.xlsx')
+parser.add_argument('--sheetname', nargs='?', default='Sheet', help='excel 分頁名稱，預設為sheet')
+parser.add_argument('--source', nargs='?' , default='TestImage', help='圖片資料夾，預設TestImage')
+parser.add_argument('--score', nargs='?', type=int, default=1, help='分數[1~5]，大於輸入的值才添加進excel，預設為1')
+parser.add_argument('--limit', nargs='?', type=int, default=200, help='最大處理圖片數量 預設為200')
 # 解析參數
 args = parser.parse_args()
 limit = args.limit
 # 设定文件夹路径
-
 folder_path = args.source
-# folder_path = 'TestImage\saika_kawakita__official'
+
 # 创建一个工作簿
 
 filename = args.excel
@@ -224,8 +221,10 @@ else:
     # print("工作表不存在")
     ws = wb.create_sheet(sheet_name)
 i = 1
+imagePaths =  glob.glob(folder_path + '/*.jpg') + glob.glob(folder_path + '/*.png') +  glob.glob(folder_path + '/*.jpeg')
+
 # 遍历文件夹中的所有图片
-for img_file in  glob.glob(folder_path + '/*.jpg') + glob.glob(folder_path + '/*.png') +  glob.glob(folder_path + '/*.jpeg'):
+for img_file in imagePaths:
      # 读取图像
     image = cv2.imread(img_file)
     # 圖片 加上padding
