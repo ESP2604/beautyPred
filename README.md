@@ -12,6 +12,8 @@
 
 ## 安装依赖项
 
+Python 版本在 3.7 到 3.11 之间
+
 ```bash
 git clone https://github.com/ESP2604/beautyPred.git
 cd beautyPred
