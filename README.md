@@ -12,12 +12,12 @@
 
 ## 安装依赖项
 
-Python 版本在 3.7 到 3.11 之间
+torch==2.3.0
 
 ```bash
 git clone https://github.com/ESP2604/beautyPred.git
 cd beautyPred
-conda env create -f env.yaml --name myenv
+pip install -r requirements.txt
 ```
 
 ## 下载预训练模型
