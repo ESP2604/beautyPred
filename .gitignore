@@ -3,6 +3,6 @@
 /models/efficient2_model_epoch_15.pth
 /__pycache__/
 /TestImage/
-/runs/experiment_name
+/runs/*
 /*.xlsx
 /.vscode/

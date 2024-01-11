@@ -4,7 +4,6 @@ import torchvision.transforms as transforms
 from PIL import Image
 import matplotlib.pyplot as plt
 import numpy as np
-import Nets  # 导入您的模型定义
 
 from retinaface import RetinaFace
 from efficientnet_pytorch import EfficientNet
