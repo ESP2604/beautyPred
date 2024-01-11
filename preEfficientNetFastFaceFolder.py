@@ -204,7 +204,7 @@ parser = argparse.ArgumentParser(description='人臉打分輸出excel')
 # 添加參數，並為部分參數設置預設值
 parser.add_argument('--excel', nargs='?', default='output1.xlsx', help='輸出excel路徑，如果有則寫入excel的其他分頁，預設為output.xlsx')
 parser.add_argument('--sheetname', nargs='?', default='Sheet', help='excel 分頁名稱，預設為sheet')
-parser.add_argument('--source', nargs='?' , default='testImage', help='圖片資料夾，預設TestImage')
+parser.add_argument('--source', nargs='?' , default='TestImage', help='圖片資料夾，預設TestImage')
 parser.add_argument('--score', nargs='?', type=int, default=1, help='分數[1~5]，大於輸入的值才添加進excel，預設為1')
 parser.add_argument('--limit', nargs='?', type=int, default=200, help='最大處理圖片數量 預設為200')
 # 解析參數
