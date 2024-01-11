@@ -17,7 +17,7 @@ Python 版本在 3.7 到 3.11 之间
 ```bash
 git clone https://github.com/ESP2604/beautyPred.git
 cd beautyPred
-pip install -r requirements.txt
+conda env create -f env.yaml --name myenv
 ```
 
 ## 下载预训练模型
