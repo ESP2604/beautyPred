@@ -12,7 +12,6 @@
 
 ## 安装依赖项
 
-torch==2.3.0
 
 ```bash
 git clone https://github.com/ESP2604/beautyPred.git
