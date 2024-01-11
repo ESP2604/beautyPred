@@ -12,7 +12,19 @@ import excelTool
 # from openpyxl.drawing.image import Image as OpenpyxlImage
 import argparse
 import MyImageTool
+# 定义要检查的目录路径
+directory_path = 'tmp'
 
+# 检查目录是否存在
+if not os.path.exists(directory_path):
+    try:
+        # 如果目录不存在，创建它
+        os.makedirs(directory_path)
+        print(f"目录 '{directory_path}' 已创建。")
+    except OSError as e:
+        print(f"创建目录 '{directory_path}' 时出错: {e}")
+else:
+    print(f"目录 '{directory_path}' 已存在。")
 # 1. 检查GPU是否可用
 if torch.cuda.is_available():
     device = torch.device("cuda")
@@ -202,7 +214,6 @@ limit = args.limit
 folder_path = args.source
 
 # 创建一个工作簿
-
 filename = args.excel
 sheet_name = args.sheetname
 wb = None
@@ -239,11 +250,11 @@ for img_file in imagePaths:
     # paddingReSetRect(padding_vis_image,faceImgList[0]['coords'], start_x, start_y)
 
     # 将结果图像保存
-    save_path = os.path.join('TestImage/output/', os.path.basename(img_file))
+    save_path = os.path.join('tmp/output/', os.path.basename(img_file))
     # save_path=""
     cv2.imwrite(save_path, vis_image)
     # 将结果图像保存
-    padding_save_path = os.path.join('TestImage/output/', f'padding_{os.path.basename(img_file)}')
+    padding_save_path = os.path.join('tmp/output/', f'padding_{os.path.basename(img_file)}')
 
     cv2.imwrite(padding_save_path, padding_vis_image)
 
