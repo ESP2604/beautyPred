@@ -10,16 +10,6 @@
 
 本項目使用[SCUT-FBP5500](https://github.com/HCIILAB/SCUT-FBP5500-Database-Release)對efficientnet-b0進行訓練
 
-# 项目描述
-
- **项目描述：** BeautyPrediction 是一个基于深度学习的人脸美观度评分工具。该工具使用预训练的神经网络模型 efficientnet-b0，并针对美观度评分任务进行了训练。其主要目的是自动评估人脸图像的美观度，并帮助用户选择最具吸引力的图像。这个项目的训练数据来自 [SCUT-FBP5500 数据集](https://github.com/HCIILAB/SCUT-FBP5500-Database-Release)，通过对大量人脸图像进行训练，模型可以有效地预测人脸的美观度。 
-
-## 技术细节 
-
-BeautyPrediction 使用了 efficientnet-b0 模型，这是一个轻量级但功能强大的卷积神经网络。模型经过预训练，然后通过进一步的训练来适应美观度评分任务。它具有出色的性能和泛化能力，可以在各种应用中使用。 
-
-# 使用文档
-
 ## 安装依赖项
 
 ```bash
