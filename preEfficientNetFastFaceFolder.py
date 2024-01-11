@@ -250,11 +250,11 @@ for img_file in imagePaths:
     # paddingReSetRect(padding_vis_image,faceImgList[0]['coords'], start_x, start_y)
 
     # 将结果图像保存
-    save_path = os.path.join('tmp/output/', os.path.basename(img_file))
+    save_path = os.path.join('tmp/', os.path.basename(img_file))
     # save_path=""
     cv2.imwrite(save_path, vis_image)
     # 将结果图像保存
-    padding_save_path = os.path.join('tmp/output/', f'padding_{os.path.basename(img_file)}')
+    padding_save_path = os.path.join('tmp/', f'padding_{os.path.basename(img_file)}')
 
     cv2.imwrite(padding_save_path, padding_vis_image)
 
