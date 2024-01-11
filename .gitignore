@@ -6,3 +6,4 @@
 /runs/*
 /*.xlsx
 /.vscode/
+!.models
