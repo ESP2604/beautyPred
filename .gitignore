@@ -2,9 +2,7 @@
 /data/
 /models/efficient2_model_epoch_15.pth
 /__pycache__/
-/TestImage/
+/TestImage/*
 /runs/*
 /*.xlsx
 /.vscode/
-!.models
-!.gitkeep
