@@ -73,9 +73,65 @@ transform = transforms.Compose([
 # 初始化全域的臉部偵測器
 face_detector = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
+def crop_face(img):
+    """
+    裁剪圖片中的臉部並調整大小至512x512像素。
+    input_image_path: 輸入圖片的路徑
+    output_image_path: 輸出圖片的路徑
+    """
+    # 讀取輸入圖片
+    height, width, channels = img.shape
+    
+    # 將圖片轉換為灰度圖，以進行臉部偵測
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    
+    # 使用全域變量進行臉部偵測
+    faces = face_detector.detectMultiScale(gray, scaleFactor=1.3, minNeighbors=5, minSize=(30, 30))
+
+    # 檢查是否偵測到臉部
+    if len(faces) == 0:
+        print(f"在中未找到臉部")
+        return None, None
+
+    # 假設要裁剪的是第一個偵測到的臉部
+    x, y, w, h = faces[0]
+    
+    # 計算可以用於裁剪的最大正方形大小
+    square_size = min([width - x, x, y, height - y])
+
+    # 確保square_size為正，並且在圖像邊界內
+    square_size = max(min(square_size, w, h), 0)
+    
+ 
+    # 根據臉部周圍裁剪出一個正方形
+
+    cropped_img = img[max(y - square_size, 0):y + h + square_size, max(x - square_size, 0):x + w + square_size]
+    # 將裁剪後的圖片調整大小為512x512
+    resized_img = cv2.resize(cropped_img, (512, 512), interpolation=cv2.INTER_AREA)
+
+    # 計算畫框的左上角和右下角坐標
+    top_left = (max(x - square_size, 0), max(y - square_size, 0))
+    bottom_right = (x + w + square_size, y + h + square_size)
+
+    # 在圖片上畫出矩形框
+    cv2.rectangle(img, top_left, bottom_right, (0, 255, 0), 3)  #
+    list = []
+    tmp = {
+        'face_image':cropped_img,
+        'top_left':(max(x - square_size, 0), max(y - square_size, 0)),
+        'bottom_right':(x + w + square_size, y + h + square_size),
+           'new_x': max(x - square_size, 0),
+           'new_y': max(y - square_size, 0),
+           'new_w': (x + w + square_size) - max(x - square_size, 0) ,
+           'new_h': (y + h + square_size) - max(y - square_size, 0) ,
+        }
+      
+    list.append(tmp)
+    return img , list
 
 
-def expand_coords(output,coords):
+
+def expand_coords(coords):
     """
     根据给定的扩展比例放大坐标
     :param coords: 包含四个元素的列表或元组，格式为 [x, y, width, height]
@@ -90,22 +146,11 @@ def expand_coords(output,coords):
     new_y = max(0, (y - int(h * 0.4) ))  # 确保坐标不会是负数
     new_w = int( w * 1.5) 
     new_h = int( h * 1.5)
-    width=output.shape[0]
-    height = output.shape[1]
-      # 計算可以用於裁剪的最大正方形大小
-    square_size = min([width - x, x, y, height - y])
-
-    # 確保square_size為正，並且在圖像邊界內
-    square_size = max(min(square_size, w, h), 0)
-    new_x= max(x - square_size, 0)
-    new_y= max(y - square_size, 0)
-    new_w=  (x + w + square_size) - max(x - square_size, 0) 
-    new_h=  (y + h + square_size) - max(y - square_size, 0) 
-    return int(new_x), int(new_y), int(new_w), int(new_h)
+    return new_x, new_y, new_w, new_h
 
 def paddingReSetRect(output,coords, start_x ,start_y):
 
-    new_x, new_y, new_w, new_h = expand_coords(output,coords)
+    new_x, new_y, new_w, new_h = expand_coords(coords)
     if max(0,new_x - start_x) == 0 : new_x = 0
     if max(0,new_y - start_y) == 0 : new_y = 0
     # 绘制矩形框
@@ -113,7 +158,7 @@ def paddingReSetRect(output,coords, start_x ,start_y):
 
 def facerect(output,coords):
     # 假设 coords 是一个包含四个元素的列表或元组，格式为 [x, y, width, height]
-    new_x, new_y, new_w, new_h = expand_coords(output,coords)
+    new_x, new_y, new_w, new_h = expand_coords(coords)
     # 绘制矩形框
     cv2.rectangle(output, (new_x, new_y), (new_x + new_w, new_y + new_h), (0, 255, 0), 2)
 
@@ -128,7 +173,7 @@ def visualize(image, faces):
         # Draw face bounding box
         facerect(output, coords)
         
-        new_x, new_y, new_w, new_h = expand_coords(output,coords)
+        new_x, new_y, new_w, new_h = expand_coords(coords)
         tmp = {
         'face_image':image[ new_y:new_y  + new_h, new_x:new_x + new_w],
             'coords':coords,
@@ -179,13 +224,33 @@ def detect_and_score_faces(image):
     # 返回包含评分的图像和分数
     return vis_image, score, faceImgList
 
+def detect_and_score_single_faces(image):
+    """
+        只會判斷第一張臉
+    """
+    vis_image ,faceImgList= crop_face(image)  # faces: None, or nx15 np.array
+    
+    if(vis_image is None): return None,None,None
+    # vis_image,faceImgList = visualize(image, faces)
 
+    # 对每张脸进行评分
+    score = 0
+    for faceItem in faceImgList:
+        score = pre(faceItem['face_image'])
+        vis_image = printScore(vis_image,score)
+    # 返回包含评分的图像和分数
+    return vis_image, score, faceImgList
 
 # 人臉識別 -> 臉部打分
 def process_image(image):
     # 判断脸在哪
-    yunet.setInputSize((image.shape[1], image.shape[0]))
-    return detect_and_score_faces(image)
+    
+    if False:
+        yunet.setInputSize((image.shape[1], image.shape[0]))
+        return detect_and_score_faces(image)
+    else:
+        # 只會判斷第一張臉
+        return detect_and_score_single_faces(image)
 
 # filePath 檔案路徑
 # count 最重試次數
@@ -230,7 +295,7 @@ parser.add_argument('--excel', nargs='?', default='output1.xlsx', help='輸出ex
 parser.add_argument('--sheetname', nargs='?', default='Sheet', help='excel 分頁名稱，預設為sheet')
 parser.add_argument('--source', nargs='?' , default='TestImage', help='圖片資料夾，預設TestImage')
 parser.add_argument('--score', nargs='?', type=int, default=1, help='分數[1~5]，大於輸入的值才添加進excel，預設為1')
-parser.add_argument('--limit', nargs='?', type=int, default=200, help='最大處理圖片數量 預設為200')
+parser.add_argument('--limit', nargs='?', type=int, default=10, help='最大處理圖片數量 預設為200')
 # 解析參數
 args = parser.parse_args()
 limit = args.limit
