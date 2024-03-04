@@ -3,12 +3,36 @@ from flask import Flask, request ,jsonify
 
 from PIL import Image
 from waitress import serve
+import excelTool, os, cv2
+from FaceRatingTool import FaceRating , CropFace, faceRatingPre ,crop_image_into_parts  ,AvatarImage
 IMAGE_DIM = 224   # required/default image dimensionality
 
 # FLASK 判斷色情圖片接口
 app = Flask(__name__)
 
-@app.route('/nsfw/uploadCropColxRow', methods=['POST'])
+cropFace = CropFace()
+faceRating = FaceRating()
+def ex(actorImage, index):
+    # 将结果图像保存
+    save_path = os.path.join('tmp/', f'tmp{index}.jpg')
+    # save_path=""
+    cv2.imwrite(save_path, actorImage.infoImage)
+
+    # score = padding_score
+    data = excelTool.MyExcelData()
+    data.score = actorImage.score
+    data.padding_score = 0
+    data.image_path = save_path
+    data.image_name = os.path.basename(save_path)
+    data.avatar_path = save_path
+    data.padding_avatar_path = ''
+    data.row = index
+    print(f'{index}分数[1~5]: original:{data.score} padding:{data.padding_score}')
+    return excelTool.writeExcel(data, index)
+   
+    
+
+@app.route('/beautyPrediction/uploadCropColxRow', methods=['POST'])
 def uploadCropColxRow():
     if 'image' not in request.files:
         return "No file part"
@@ -22,17 +46,34 @@ def uploadCropColxRow():
         return "No selected file"
 
     if file:
-        images = nfswTool.crop_image_into_parts(file,col, row)
+        images =   crop_image_into_parts(file,col, row)
+        result = []
+        
+        for item in images:
+            # print(item.shape)
+            faces = cropFace.detect(item)
+            if(len(faces) > 1 or len(faces) == 0): continue
+            result.append (faces[0])
+
+        for item in result:
+            # 捕捉到的臉部標記
+            item.facerect()
+        faceRatingPre(faceRating, result)
         # file.save(path_str)
         # np_file, file_paths = loadRequestFile(file)
-        # np_file, file_paths = nfswTool.convert_image(images, file)
+        # np_file, file_paths = convert_image(images, file)
         # formatted_str = "%s size: %s" % (file.filename, (IMAGE_DIM))
         # print(formatted_str)
-        # probs = predict.classify_nd(model, np_file)
-        # os.remove(path_str)
-        # d = dict(zip(file_paths ,probs))
-        d = None
-        return jsonify(d)
+        
+        
+        wb = None
+        for idx, item in enumerate(result):
+            print(f'result[{idx}].score = {item.score}')
+            wb = ex(item, idx+1)
+        excelTool.reTrySave(10, wb)
+        
+        
+        return jsonify('{ok:"ok"}')
     else:
         return "Failed to upload file"
 
@@ -72,7 +113,7 @@ def test():
 
   
 if __name__ == '__main__':
-    serve(app, host="0.0.0.0", port=8080)
+    serve(app, host="0.0.0.0", port=8000)
     # app.run(port=8080)
     
    
