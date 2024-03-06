@@ -1,34 +1,22 @@
 from openpyxl import Workbook
 from openpyxl.drawing.image import Image
-
-from openpyxl import Workbook
-from openpyxl.drawing.image import Image
-from openpyxl.utils import get_column_letter
 from PIL import Image as PILImage
 import io, os
 from openpyxl import Workbook ,load_workbook
 import cv2
-class MyExcelData:
-    def __init__(self):
-        self.score = None
-        self.image_name= None
-        self.image_path= None
-        self.avatar_path= None
-        self.row = None
-        self.padding_score= None
-        self.padding_avatar_path = None
-        
+import numpy as np
+
 def convert_cv2_to_pil(cv2_image):
     """將OpenCV圖像轉換為PIL圖像"""
     # OpenCV存儲圖像的格式是BGR，轉換為RGB格式
     rgb_image = cv2.cvtColor(cv2_image, cv2.COLOR_BGR2RGB)
     # 將NumPy數組轉換為PIL圖像
-    pil_image = Image.fromarray(rgb_image)
+    pil_image = PILImage.fromarray(rgb_image)
     return pil_image
 
-def resize_and_compress_image_in_memory(input_image_path, scale_factor, quality=85):
+def resize_and_compress_image_in_memory(img, scale_factor, quality=85):
     # 加载原始图像
-    img = PILImage.open(input_image_path)
+    # img = PILImage.open(input_image_path)
     
     # 如果图像是RGBA模式，则转换为RGB
     if img.mode == 'RGBA':
@@ -50,21 +38,18 @@ def resize_and_compress_image_in_memory(input_image_path, scale_factor, quality=
     
     return img_byte_arr
     
-def insertImage(ws, img_path ,anchor ,row, scale_factor =1,quality=20):
+def insertImage(ws, img ,anchor ,row, scale_factor =1,quality=20):
         # 设置单元格的宽度和高度
     desired_cell_width =  50 # 根据需要调整
     desired_cell_height = 150  # 根据需要调整
     ws.column_dimensions[anchor[0]].width = desired_cell_width
-    # ws.column_dimensions[get_column_letter(3)].width = desired_cell_width
-    # ws.column_dimensions[get_column_letter(4)].width = desired_cell_width
-    # ws.column_dimensions[get_column_letter(5)].width = desired_cell_width
     # for row in range(1, 5):  # 假设您要调整前四行的高度
     ws.row_dimensions[row].height = desired_cell_height
 
     # 加载并添加图片
     # img_path = "path_to_your_image.png"  # 替换为您的图片路径
-    
-    img_byte_arr = resize_and_compress_image_in_memory(img_path, 
+    img = convert_cv2_to_pil(img)
+    img_byte_arr = resize_and_compress_image_in_memory(img, 
         scale_factor=scale_factor, quality=quality)  # 根据需要调整scale_factor和quality
     img = Image(img_byte_arr)
 
@@ -128,21 +113,14 @@ class ExcelSaver:
             print("重试次数已达上限，保存失败。")
 
     def writeExcel(self , data,i,):
-
-        # 写入分数和图像名称
-        self.ws[f'A{i}'] = data.score
-        self.ws[f'B{i}'] = data.image_name
-        self.ws[f'F{i}'] = data.padding_score
-
-        # 插入图像
-        if os.path.exists(data.image_path):
-            insertImage(self.ws, data.image_path,f'C{data.row}', data.row ,scale_factor =1,quality=60)
-        # 插入头像
-        if os.path.exists(data.avatar_path):
-            insertImage(self.ws, data.avatar_path,f'D{data.row}' , data.row,scale_factor =1,quality=60)
-        # 插入padding過後的頭向
-        if os.path.exists(data.padding_avatar_path):
-            insertImage(self.ws, data.padding_avatar_path,f'E{data.row}' , data.row,scale_factor =1,quality=60)
-        if os.path.exists(data.save_face_path):
-            insertImage(self.ws, data.save_face_path,f'G{data.row}' , data.row,scale_factor =1,quality=60)
-        return self.wb
+        for item in data:
+            value = item['value']
+            column = item['column']
+            row = item['row']
+            # 插入圖片
+            if type(value) == np.ndarray:
+                insertImage(self.ws,value ,f'{column}{row}', row ,scale_factor =1,quality=60)
+            else:
+                # 插入除了圖片以外的值
+                self.ws[f'{column}{row}'] = value
+            
