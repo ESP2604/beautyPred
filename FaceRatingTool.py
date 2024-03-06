@@ -5,13 +5,7 @@ import torch
 from efficientnet_pytorch import EfficientNet
 import torch.nn as nn
 import torchvision.transforms as transforms
-import glob
-import os, io
-from openpyxl import Workbook ,load_workbook
-import excelTool
-# from openpyxl.drawing.image import Image as OpenpyxlImage
-import argparse
-import MyImageTool
+import io
 
 class AvatarImage:
     def __init__(self, image,coords) -> None:
@@ -20,9 +14,10 @@ class AvatarImage:
         self.processedImage = image.copy()
         self.infoImage = image.copy()
         self.score = 0
+        
         # 裁減大頭貼
         new_x, new_y, new_w, new_h = self.expand_coords()
-        self.faceImage = self.originalImage[ new_y:new_y  + new_h, new_x:new_x + new_w],
+        self.faceImage = self.originalImage[ new_y:new_y  + new_h, new_x:new_x + new_w]
         # "原始圖片"翻譯成英文是"Original Image"。
         # "加工圖片"翻譯成英文是"Processed Image"。
     def printScore(self, score):
@@ -31,6 +26,27 @@ class AvatarImage:
         cv2.putText(self.infoImage, 'Score:{:.4f}'.format(score), ( 0, height - 30), cv2.FONT_HERSHEY_SIMPLEX, 1,
                     (255, 0, 0) )
         return self
+    # 函數來計算兩點之間的角度
+    def find_angle_between_eyes(p1, p2):
+        deltaX = p2[0] - p1[0]
+        deltaY = p2[1] - p1[1]
+        angleInDegrees = np.arctan2(deltaY, deltaX) * 180 / np.pi
+        return angleInDegrees
+    
+    def correct_face_tilt(self):
+        """矯正圖像中臉部的傾斜"""
+        img = self.faceImage
+        
+        # 使用眼睛的位置計算傾斜角度
+        left_eye = (self.coords[4], self.coords[5])
+        right_eye = (self.coords[6], self.coords[7])
+        angle = AvatarImage.find_angle_between_eyes(left_eye, right_eye)
+        
+        # 計算臉部中心，用於圖像旋轉
+        center_of_face = ((left_eye[0] + right_eye[0]) / 2.0, (left_eye[1] + right_eye[1]) / 2.0)
+        rotation_matrix = cv2.getRotationMatrix2D(center_of_face, angle, 1)
+        self.faceImage = cv2.warpAffine(img, rotation_matrix, (img.shape[1], img.shape[0]))
+     
 
     def paddingReSetRect( self, start_x ,start_y):
         new_x, new_y, new_w, new_h = self.expand_coords()
@@ -55,10 +71,15 @@ class AvatarImage:
             標記五官特徵
         '''
         # 標記五官
+        # 紅色左眼
         cv2.circle(self.infoImage, (self.coords[4], self.coords[5]), 2, (255, 0, 0), 2)
+        # 藍色右眼
         cv2.circle(self.infoImage, (self.coords[6], self.coords[7]), 2, (0, 0, 255), 2)
+        # 綠色鼻子
         cv2.circle(self.infoImage, (self.coords[8], self.coords[9]), 2, (0, 255, 0), 2)
+        # 紅色左臉
         cv2.circle(self.infoImage, (self.coords[10], self.coords[11]), 2, (255, 0, 255), 2)
+        # 黃色右臉
         cv2.circle(self.infoImage, (self.coords[12], self.coords[13]), 2, (0, 255, 255), 2)
         return self
     def expand_coords(self):

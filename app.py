@@ -4,7 +4,8 @@ from flask import Flask, request ,jsonify
 from PIL import Image
 from waitress import serve
 import excelTool, os, cv2
-from FaceRatingTool import FaceRating , CropFace, faceRatingPre ,crop_image_into_parts  ,AvatarImage
+from excelTool import  ExcelSaver
+from FaceRatingTool import FaceRating , CropFace, faceRatingPre ,crop_image_into_parts
 IMAGE_DIM = 224   # required/default image dimensionality
 
 # FLASK 判斷色情圖片接口
@@ -12,6 +13,7 @@ app = Flask(__name__)
 
 cropFace = CropFace()
 faceRating = FaceRating()
+excelSaver = ExcelSaver()
 def ex(actorImage, index):
     # 将结果图像保存
     save_path = os.path.join('tmp/', f'info_tmp{index}.jpg')
@@ -21,8 +23,8 @@ def ex(actorImage, index):
     save_info_path =  os.path.join('tmp/', f'original_tmp{index}.jpg')
     # save_path=""
     cv2.imwrite(save_path, actorImage.infoImage)
-
-
+    save_face_path =  os.path.join('tmp/', f'face_tmp{index}.jpg')
+    cv2.imwrite(save_face_path, actorImage.faceImage)
     # score = padding_score
     data = excelTool.MyExcelData()
     data.score = actorImage.score
@@ -32,8 +34,9 @@ def ex(actorImage, index):
     data.avatar_path = save_path
     data.padding_avatar_path = ''
     data.row = index
+    data.save_face_path = save_face_path
     print(f'{index}分数[1~5]: original:{data.score} padding:{data.padding_score}')
-    return excelTool.writeExcel(data, index)
+    excelSaver.writeExcel(data, index)
    
     
 
@@ -63,15 +66,17 @@ def uploadCropColxRow():
         for item in result:
             # 捕捉到的臉部標記
             item.facerect()
+            # 把臉橋正
+            item.correct_face_tilt()
         faceRatingPre(faceRating, result)
 
         
-        
-        wb = None
+        excelSaver.load_or_create_workbook()
+        wb = excelSaver.wb
         for idx, item in enumerate(result):
             print(f'result[{idx}].score = {item.score}')
             wb = ex(item, idx+1)
-        excelTool.reTrySave(10, wb)
+        excelSaver.reTrySave(10)
         
         
         return jsonify('{ok:"ok"}')
@@ -81,6 +86,6 @@ def uploadCropColxRow():
         
 
 if __name__ == '__main__':
-    serve(app, host="0.0.0.0", port=8000)
+    serve(app, host="0.0.0.0", port=5000)
 
     

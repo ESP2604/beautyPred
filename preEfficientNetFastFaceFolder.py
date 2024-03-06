@@ -109,6 +109,9 @@ for img_file in imagePaths:
     for item in actorImages:
         # 捕捉到的臉部標記
         item.facerect()
+        # item.markFeatures()
+        # 把臉橋正
+        item.correct_face_tilt()
     if len(actorImages) > 0: 
         original_images = [actor_image.originalImage for actor_image in actorImages]
         scores = faceRating.pre(original_images)
