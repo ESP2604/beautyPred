@@ -12,6 +12,7 @@ import excelTool
 # from openpyxl.drawing.image import Image as OpenpyxlImage
 import argparse
 import MyImageTool
+from FaceRatingTool import FaceRating , CropFace
 # 定义要检查的目录路径
 directory_path = 'tmp'
 
@@ -25,167 +26,6 @@ if not os.path.exists(directory_path):
         print(f"创建目录 '{directory_path}' 时出错: {e}")
 else:
     print(f"目录 '{directory_path}' 已存在。")
-# 1. 检查GPU是否可用
-if torch.cuda.is_available():
-    device = torch.device("cuda")
-else:
-    device = torch.device("cpu")
-
-def loadModel():
-        # 加载预训练的 EfficientNet 模型
-    model = EfficientNet.from_pretrained('efficientnet-b0')  
-    # 修改最后一层以适应回归任务
-    model._fc = nn.Linear(model._fc.in_features, 1)
-    model.load_state_dict(torch.load('models/efficient2_model_epoch_15.pth'))
-    model.to(device)
-    model.eval()
-    return model
-
-def createFaceDetectorYN(modelStr = '.\\face_detection_yunet_2022mar.onnx'):
-    score_threshold = 0.85
-    nms_threshold = 0.35
-    backend = cv2.dnn.DNN_BACKEND_DEFAULT
-    target = cv2.dnn.DNN_TARGET_CPU
-    # Instantiate yunet
-    yunet = cv2.FaceDetectorYN.create(
-        model=modelStr,
-        config='',
-        input_size=(320, 320),
-        score_threshold=score_threshold,
-        nms_threshold=nms_threshold,
-        top_k=5000,
-        backend_id=backend,
-        target_id=target
-    )
-    return yunet
-
-model = loadModel()
-yunet = createFaceDetectorYN()
-
-transform = transforms.Compose([
-   transforms.Resize(256),
-      transforms.CenterCrop(224),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-])
-
-
-# 初始化全域的臉部偵測器
-face_detector = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-
-
-
-def expand_coords(output,coords):
-    """
-    根据给定的扩展比例放大坐标
-    :param coords: 包含四个元素的列表或元组，格式为 [x, y, width, height]
-    :return: 放大后的新坐标 [new_x, new_y, new_w, new_h]
-    """
-        # 假设 coords 是一个包含四个元素的列表或元组，格式为 [x, y, width, height]
-    x = coords[0]
-    y = coords[1]
-    w = coords[2] 
-    h = coords[3] 
-    new_x = max(0, (x - int(w * 0.2) ))  # 确保坐标不会是负数
-    new_y = max(0, (y - int(h * 0.4) ))  # 确保坐标不会是负数
-    new_w = int( w * 1.5) 
-    new_h = int( h * 1.5)
-    width=output.shape[0]
-    height = output.shape[1]
-      # 計算可以用於裁剪的最大正方形大小
-    square_size = min([width - x, x, y, height - y])
-
-    # 確保square_size為正，並且在圖像邊界內
-    square_size = max(min(square_size, w, h), 0)
-    new_x= max(x - square_size, 0)
-    new_y= max(y - square_size, 0)
-    new_w=  (x + w + square_size) - max(x - square_size, 0) 
-    new_h=  (y + h + square_size) - max(y - square_size, 0) 
-    return int(new_x), int(new_y), int(new_w), int(new_h)
-
-def paddingReSetRect(output,coords, start_x ,start_y):
-
-    new_x, new_y, new_w, new_h = expand_coords(output,coords)
-    if max(0,new_x - start_x) == 0 : new_x = 0
-    if max(0,new_y - start_y) == 0 : new_y = 0
-    # 绘制矩形框
-    cv2.rectangle(output, (new_x, new_y), (new_x + new_w, new_y + new_h), (0, 255, 0), 2)
-
-def facerect(output,coords):
-    # 假设 coords 是一个包含四个元素的列表或元组，格式为 [x, y, width, height]
-    new_x, new_y, new_w, new_h = expand_coords(output,coords)
-    # 绘制矩形框
-    cv2.rectangle(output, (new_x, new_y), (new_x + new_w, new_y + new_h), (0, 255, 0), 2)
-
-def visualize(image, faces):
-    '''
-        輸出標記圖片
-    '''
-    output = image.copy()
-    list = []
-    for idx, face in enumerate(faces):
-        coords = face[:-1].astype(np.int32)
-        # Draw face bounding box
-        facerect(output, coords)
-        
-        new_x, new_y, new_w, new_h = expand_coords(output,coords)
-        tmp = {
-        'face_image':image[ new_y:new_y  + new_h, new_x:new_x + new_w],
-            'coords':coords,
-           'new_x':new_x, 
-           'new_y':new_y,
-           'new_w':new_w,
-           'new_h':new_h
-        }
-        
-        list.append(tmp)
-        # Draw landmarks
-        cv2.circle(output, (coords[4], coords[5]), 2, (255, 0, 0), 2)
-        cv2.circle(output, (coords[6], coords[7]), 2, (0, 0, 255), 2)
-        cv2.circle(output, (coords[8], coords[9]), 2, (0, 255, 0), 2)
-        cv2.circle(output, (coords[10], coords[11]), 2, (255, 0, 255), 2)
-        cv2.circle(output, (coords[12], coords[13]), 2, (0, 255, 255), 2)
-        return output, list
-
-def printScore(image, score):
-    output = image.copy()
-    height, width = output.shape[:2]
-     # Put score
-    cv2.putText(output, 'Score:{:.4f}'.format(score), ( 0, height - 30), cv2.FONT_HERSHEY_SIMPLEX, 1,
-                   (255, 0, 0) )
-    return output
-
-
-def pre(img):
-    # 将 NumPy 数组转换为 PIL 图像
-    image_pil = Image.fromarray(img)
-    image_tensor =transform(image_pil).to(device)
-    image_tensor =image_tensor.unsqueeze(0)
-    with torch.no_grad():
-        prediction = model(image_tensor).cpu().item()
-        return prediction
-
-def detect_and_score_faces(image):
-    _, faces = yunet.detect(image)  # faces: None, or nx15 np.array
-    
-    if(faces is None): return None,None,None
-    vis_image,faceImgList = visualize(image, faces)
-
-    # 对每张脸进行评分
-    score = 0
-    for faceItem in faceImgList:
-        score = pre(faceItem['face_image'])
-        vis_image = printScore(vis_image,score)
-    # 返回包含评分的图像和分数
-    return vis_image, score, faceImgList
-
-
-
-# 人臉識別 -> 臉部打分
-def process_image(image):
-    # 判断脸在哪
-    yunet.setInputSize((image.shape[1], image.shape[0]))
-    return detect_and_score_faces(image)
 
 # filePath 檔案路徑
 # count 最重試次數
@@ -214,13 +54,13 @@ def writeExcel(data,i):
     ws[f'F{i}'] = data.padding_score
     # 插入图像
     if os.path.exists(data.image_path):
-        excelTool.insertImage(ws, data.image_path,f'C{data.row}', data.row )
+        excelTool.insertImage(ws, data.image_path,f'C{data.row}', data.row ,scale_factor =1,quality=20)
     # 插入头像
     if os.path.exists(data.avatar_path):
-        excelTool.insertImage(ws, data.avatar_path,f'D{data.row}' , data.row)
-
+        excelTool.insertImage(ws, data.avatar_path,f'D{data.row}' , data.row,scale_factor =1,quality=20)
+    # 插入padding過後的頭向
     if os.path.exists(data.padding_avatar_path):
-        excelTool.insertImage(ws, data.padding_avatar_path,f'E{data.row}' , data.row)
+        excelTool.insertImage(ws, data.padding_avatar_path,f'E{data.row}' , data.row,scale_factor =1,quality=20)
 
 # 創建 ArgumentParser 對象
 parser = argparse.ArgumentParser(description='人臉打分輸出excel')
@@ -256,19 +96,50 @@ else:
 i = 1
 imagePaths =  glob.glob(folder_path + '/*.jpg') + glob.glob(folder_path + '/*.png') +  glob.glob(folder_path + '/*.jpeg')
 limit = min(limit, len(imagePaths))
+cropFace = CropFace()
+faceRating = FaceRating()
 # 遍历文件夹中的所有图片
 for img_file in imagePaths:
      # 读取图像
     image = cv2.imread(img_file)
     # 圖片 加上padding
     # 判斷圖片
-    vis_image, score, faceImgList = process_image(image)
-  
+    actorImages = cropFace.detect(image)
+    # 要標記的東西
+    for item in actorImages:
+        # 捕捉到的臉部標記
+        item.facerect()
+    if len(actorImages) > 0: 
+        original_images = [actor_image.originalImage for actor_image in actorImages]
+        scores = faceRating.pre(original_images)
+        print(scores)
+        if not isinstance(scores, (list, np.ndarray)):
+            scores = [scores]
+
+        # 现在可以安全地迭代scores了
+        for idx, score in enumerate(scores):
+            actorImages[idx].score = score
     
     padding_image, start_y , new_height, start_x ,  new_width = MyImageTool.create_centered_resized_image(image)
-    padding_vis_image, padding_score , faceImgList = process_image(padding_image)
+    
 
-    if(vis_image is None  or padding_vis_image is None ): continue 
+    paddingActorImages = cropFace.detect(padding_image)
+    for item in paddingActorImages:
+        item.facerect()
+
+    if len(paddingActorImages) > 0: 
+        original_images = [actor_image.originalImage for actor_image in paddingActorImages]
+        scores = faceRating.pre(original_images)
+        # 确保scores是一个列表
+        if not isinstance(scores, (list, np.ndarray)):
+            scores = [scores]
+
+        # 现在可以安全地迭代scores了
+        for idx, score in enumerate(scores):
+            paddingActorImages[idx].score = score
+
+
+    if(actorImages is None  or paddingActorImages == 0 ): continue 
     # padding_vis_image = image.copy()
     # 通常只有一張臉
     # paddingReSetRect(padding_vis_image,faceImgList[0]['coords'], start_x, start_y)
@@ -276,16 +147,16 @@ for img_file in imagePaths:
     # 将结果图像保存
     save_path = os.path.join('tmp/', os.path.basename(img_file))
     # save_path=""
-    cv2.imwrite(save_path, vis_image)
+    cv2.imwrite(save_path, actorImages[0].infoImage)
     # 将结果图像保存
     padding_save_path = os.path.join('tmp/', f'padding_{os.path.basename(img_file)}')
 
-    cv2.imwrite(padding_save_path, padding_vis_image)
+    cv2.imwrite(padding_save_path, paddingActorImages[0].infoImage)
 
     # score = padding_score
     data = excelTool.MyExcelData()
-    data.score = score
-    data.padding_score = padding_score
+    data.score = actorImages[0].score
+    data.padding_score = paddingActorImages[0].score
     data.image_path = img_file
     data.image_name = os.path.basename(img_file)
     data.avatar_path = save_path
@@ -294,8 +165,8 @@ for img_file in imagePaths:
     writeExcel(data,i)
     i+=1
     if(i >limit): break
-    print(f'{i}/{limit}分数[1~5]: {score}')
+    
+    print(f'{i}/{limit}分数[1~5]: original:{data.score} padding:{data.padding_score}')
     # cv2.imshow('xx', vis_image)
     # cv2.waitKey(0)
 reTrySave("output.xlsx",  10)
-
