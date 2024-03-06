@@ -14,9 +14,14 @@ cropFace = CropFace()
 faceRating = FaceRating()
 def ex(actorImage, index):
     # 将结果图像保存
-    save_path = os.path.join('tmp/', f'tmp{index}.jpg')
+    save_path = os.path.join('tmp/', f'info_tmp{index}.jpg')
+    # save_path=""
+    cv2.imwrite(save_path, actorImage.originalImage)
+    # 将结果图像保存
+    save_info_path =  os.path.join('tmp/', f'original_tmp{index}.jpg')
     # save_path=""
     cv2.imwrite(save_path, actorImage.infoImage)
+
 
     # score = padding_score
     data = excelTool.MyExcelData()

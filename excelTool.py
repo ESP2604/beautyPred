@@ -127,9 +127,9 @@ def writeExcel(data,i,):
         insertImage(ws, data.image_path,f'C{data.row}', data.row ,scale_factor =1,quality=60)
     # 插入头像
     if os.path.exists(data.avatar_path):
-        insertImage(ws, data.avatar_path,f'D{data.row}' , data.row,scale_factor =1,quality=20)
+        insertImage(ws, data.avatar_path,f'D{data.row}' , data.row,scale_factor =1,quality=60)
     # 插入padding過後的頭向
     if os.path.exists(data.padding_avatar_path):
-        insertImage(ws, data.padding_avatar_path,f'E{data.row}' , data.row,scale_factor =1,quality=20)
+        insertImage(ws, data.padding_avatar_path,f'E{data.row}' , data.row,scale_factor =1,quality=60)
 
     return wb

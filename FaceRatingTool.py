@@ -229,14 +229,14 @@ def crop_image_into_parts(file, cols, rows):
     image = Image.open(io.BytesIO(file.read()))
     pil_cropped_images = crop_image(image, cols, rows)
     # 将每个PIL图像对象转换为NumPy数组
-    cropped_images = [np.array(img) for img in pil_cropped_images]
-    
+    # cropped_images = [np.array(img) for img in pil_cropped_images]
+    cropped_images = [np.array(img)[:, :, ::-1] for img in pil_cropped_images]  # 在这里进行通道转换
     return cropped_images
 async def async_crop_image_into_parts(file, cols, rows):
      # 将图像数据转换为 PIL 图像对象
     image = Image.open(io.BytesIO(await file.read()))
     return crop_image(image, cols, rows)
-    
+
 def faceRatingPre(faceRating, images):
     if len(images) > 0: 
         original_images = [actor_image.originalImage for actor_image in images]
