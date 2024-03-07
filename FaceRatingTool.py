@@ -168,10 +168,10 @@ class FaceRating:
     """
     def __init__(self):
         # 1. 检查GPU是否可用
-        # if torch.cuda.is_available():
-            # self.device = torch.device("cuda")
-        # else:
-        self.device = torch.device("cpu")
+        if torch.cuda.is_available():
+            self.device = torch.device("cuda")
+        else:
+            self.device = torch.device("cpu")
         self.model = self.loadModel()
         self.transform = transforms.Compose([
         transforms.Resize(256),
