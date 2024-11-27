@@ -18,6 +18,7 @@ class AvatarImage:
         # 裁減大頭貼
         new_x, new_y, new_w, new_h = self.expand_coords()
         self.faceImage = self.originalImage[ new_y:new_y  + new_h, new_x:new_x + new_w]
+        self.faceImageScore = 0
         # "原始圖片"翻譯成英文是"Original Image"。
         # "加工圖片"翻譯成英文是"Processed Image"。
     def printScore(self, score):
@@ -114,7 +115,15 @@ class CropFace:
         score_threshold = 0.85
         nms_threshold = 0.35
         backend = cv2.dnn.DNN_BACKEND_DEFAULT
-        target = cv2.dnn.DNN_TARGET_CPU
+        # 检查是否有可用的 GPU (CUDA)
+        if cv2.cuda.getCudaEnabledDeviceCount() > 0:
+            # 有 GPU，使用 CUDA 加速
+            target = cv2.dnn.DNN_TARGET_CUDA
+            print("CropFace使用 GPU (CUDA) 加速推理 ")
+        else:
+            # 没有 GPU，使用 CPU
+            target = cv2.dnn.DNN_TARGET_CPU
+            print("CropFace使用 CPU 进行推理")
         # Instantiate yunet
         yunet = cv2.FaceDetectorYN.create(
             model=modelStr,

@@ -5,7 +5,7 @@ import io, os
 from openpyxl import Workbook ,load_workbook
 import cv2
 import numpy as np
-
+import re
 def convert_cv2_to_pil(cv2_image):
     """將OpenCV圖像轉換為PIL圖像"""
     # OpenCV存儲圖像的格式是BGR，轉換為RGB格式
@@ -117,10 +117,28 @@ class ExcelSaver:
             value = item['value']
             column = item['column']
             row = item['row']
-            # 插入圖片
-            if type(value) == np.ndarray:
-                insertImage(self.ws,value ,f'{column}{row}', row ,scale_factor =1,quality=60)
-            else:
-                # 插入除了圖片以外的值
+            # 如果值是URL，插入超链接
+            if isinstance(value, str) and self.is_url(value):
+                # 插入超链接
                 self.ws[f'{column}{row}'] = value
-            
+                self.ws[f'{column}{row}'].hyperlink = value
+                self.ws[f'{column}{row}'].style = 'Hyperlink'  # 设置超链接样式
+            # 如果值是NumPy数组或PIL图像，插入图片
+            elif isinstance(value, np.ndarray) or isinstance(value, PILImage.Image):
+                insertImage(self.ws, value, f'{column}{row}', row, scale_factor=1, quality=60)
+            else:
+                # 否则，插入普通的文本数据
+                self.ws[f'{column}{row}'] = value
+
+    def is_url(self, string):
+        """检测字符串是否是URL"""
+        url_regex = re.compile(
+            r'^(?:http|ftp)s?://' # 匹配http:// 或 https://
+            r'(?:(?:[A-Z0-9](?:[A-Z0-9-]*[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|' # 匹配域名
+            r'localhost|' # 本地主机名
+            r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|' # 匹配IP地址
+            r'\[?[A-F0-9]*:[A-F0-9:]+\]?)' # 匹配IPv6地址
+            r'(?::\d+)?' # 匹配端口号
+            r'(?:/?|[/?]\S+)$', re.IGNORECASE)
+        
+        return re.match(url_regex, string) is not None
