@@ -13,6 +13,31 @@ import argparse
 import MyImageTool
 from FaceRatingTool import FaceRating, CropFace
 
+def get_top_faces(face_scores, face_images, min_score=3, top_n=5):
+    """
+    Returns the top N faces based on face scores greater than a specified minimum score.
+    If there are fewer than N faces, returns as many as available.
+
+    :param face_scores: List or array of face scores.
+    :param face_images: List of corresponding face images.
+    :param min_score: Minimum score to filter faces.
+    :param top_n: Number of top faces to return.
+    :return: A tuple with two lists: top_faces_scores and top_faces_images.
+    """
+    # Filter out faces with scores less than the minimum threshold
+    valid_faces = [(score, image) for score, image in zip(face_scores, face_images) if score > min_score]
+    
+    # Sort the valid faces by score (descending order)
+    valid_faces.sort(key=lambda x: x[0], reverse=True)
+    
+    # Get the top N faces (or fewer if less than N valid faces)
+    top_faces = valid_faces[:top_n]
+
+    # Extract the scores and images of the top faces
+    top_faces_scores = [face[0] for face in top_faces]
+    top_faces_images = [face[1] for face in top_faces]
+
+    return top_faces_scores, top_faces_images
 
 # 定义命令行参数解析器
 parser = argparse.ArgumentParser(description='人脸打分并输出excel')
@@ -22,7 +47,7 @@ parser.add_argument('--excel', nargs='?', default='output1.xlsx', help='输出ex
 parser.add_argument('--sheetname', nargs='?', default='Sheet', help='excel 分页名称，默认Sheet')
 parser.add_argument('--source', nargs='?', default='TestImage', help='图片文件夹，默认TestImage')
 parser.add_argument('--score', nargs='?', type=int, default=1, help='分数[1~5]，大于输入的值才添加进excel，默认1')
-parser.add_argument('--limit', nargs='?', type=int, default=1000, help='最大处理图片数量，默认200')
+parser.add_argument('--limit', nargs='?', type=int, default=5000, help='最大处理图片数量，默认200')
 
 # 解析命令行参数
 args = parser.parse_args()
@@ -163,24 +188,36 @@ for img_file in imagePaths:
         max_score_idx = np.argmax(face_scores)
         best_face_image = face_images[max_score_idx]
         best_score = face_scores[max_score_idx]
-        
+
+        scores5, face5 =  get_top_faces(face_scores, face_images, min_score=3, top_n=5)
+
         max_score_idx = np.argmax(padding_image_face_scores)
         padding_image_best_face_image = padding_image_face_images[max_score_idx]
         padding_image_best_score = padding_image_face_scores[max_score_idx]
 
-      
+        padd_scores5, padd_face5 =  get_top_faces(padding_image_face_scores, padding_image_face_images, min_score=3, top_n=5)
 
         # 将最佳评分图像信息和评分保存到excel
         index = imageIdx
         data = [
-
-            {'column': 'A', 'row': index, 'value': best_face_image},  # 最佳评分人脸图像
+            {'column': 'A', 'row': index, 'value': f'http://10.0.0.3:8080/player/index.html?hashPath={MyImageTool.extract_filename_without_extension(img_file)}'},
             {'column': 'B', 'row': index, 'value': img_file},  # 原始图像文件名
+            {'column': 'C', 'row': index, 'value': best_face_image},  # 最佳评分人脸图像
             {'column': 'C', 'row': index, 'value': best_score},
             {'column': 'D', 'row': index, 'value': padding_image_best_face_image},  # 最佳评分人脸图像
-            {'column': 'E', 'row': index, 'value': padding_image_best_score},
-            {'column': 'F', 'row': index, 'value': f'http://10.0.0.3:8080/player/index.html?hashPath={MyImageTool.extract_filename_without_extension(img_file)}'},
+            {'column': 'D', 'row': index, 'value': padding_image_best_score},
+            {'column': 'E', 'row': index, 'value': f'=IFERROR(AVERAGEIF(G{index}:Z{index}, "<>"""), MAX(C{index},D{index}))'},
         ]
+        
+        for i in range(len(scores5)):
+            data.append({'column': chr(ord('G') + i), 'row': index, 'value': face5[i]})
+            data.append({'column': chr(ord('G') + i), 'row': index, 'value': scores5[i]})
+        
+        for i in range(len(padd_scores5)):
+            data.append({'column': chr(ord('G') + i + len(scores5)), 'row': index, 'value': padd_face5[i]})
+            data.append({'column': chr(ord('G') + i + len(scores5)), 'row': index, 'value': f'padding_score{padd_scores5[i]}'})
+
+       
         
         print(f'{index}分数[1~5]: 最佳评分图像分数:{best_score:.2f}')
         
@@ -218,7 +255,7 @@ if __name__ == '__main__':
     torch.onnx.export(model, inputs, output_onnx, export_params=True, verbose=False,
                       input_names=input_names, output_names=output_names, opset_version=10)
 
-                      
+
 import onnxruntime as ort
 import cv2
 import numpy as np
